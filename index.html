@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Latvian Trainer — латышский язык для русскоязычных</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #f0f0f0;
+      line-height: 1.6;
+    }
+
+    /* ── ШАПКА ── */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background: rgba(15,15,26,0.95);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .logo { font-size: 1.2rem; font-weight: 700; color: #fff; }
+    .logo span { color: #c0392b; }
+    nav a {
+      color: #ccc;
+      text-decoration: none;
+      margin-left: 24px;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+    nav a:hover { color: #fff; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      align-items: center;
+      padding: 80px 40px;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a0a0a 50%, #0a0a1a 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -200px; right: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(192,57,43,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-content {
+      max-width: 700px;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-tag {
+      display: inline-block;
+      background: rgba(192,57,43,0.2);
+      border: 1px solid rgba(192,57,43,0.4);
+      color: #e74c3c;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin-bottom: 24px;
+      letter-spacing: 0.5px;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 20px;
+      color: #fff;
+    }
+    .hero h1 span { color: #e74c3c; }
+    .hero p {
+      font-size: 1.15rem;
+      color: #aaa;
+      margin-bottom: 36px;
+      max-width: 560px;
+    }
+    .hero-btns { display: flex; gap: 16px; flex-wrap: wrap; }
+    .btn {
+      display: inline-block;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: #c0392b;
+      color: #fff;
+    }
+    .btn-primary:hover { background: #e74c3c; transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+    .btn-outline:hover { border-color: rgba(255,255,255,0.6); transform: translateY(-1px); }
+
+    /* ── РЕЗУЛЬТАТЫ ── */
+    .stats {
+      padding: 60px 40px;
+      background: rgba(255,255,255,0.02);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .stats-grid {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 40px;
+      text-align: center;
+    }
+    .stat-num {
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: #e74c3c;
+    }
+    .stat-label { color: #888; font-size: 0.95rem; margin-top: 4px; }
+
+    /* ── О РИХАРДЕ ── */
+    .about {
+      padding: 80px 40px;
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 60px;
+      align-items: center;
+    }
+    .about-photo {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #1a0a0a, #2a1a2a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 5rem;
+      border: 2px solid rgba(192,57,43,0.3);
+      overflow: hidden;
+    }
+    .about-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 14px;
+    }
+    .about h2 { font-size: 1.8rem; margin-bottom: 16px; color: #fff; }
+    .about p { color: #aaa; margin-bottom: 14px; font-size: 1rem; }
+    .about p strong { color: #e0e0e0; }
+
+    /* ── УРОВНИ ── */
+    .levels {
+      padding: 80px 40px;
+      background: rgba(255,255,255,0.02);
+    }
+    .levels h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 12px;
+      color: #fff;
+    }
+    .levels-sub {
+      text-align: center;
+      color: #888;
+      margin-bottom: 48px;
+      font-size: 1rem;
+    }
+    .levels-grid {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .level-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 32px;
+      position: relative;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .level-card:hover {
+      border-color: rgba(192,57,43,0.4);
+      transform: translateY(-4px);
+    }
+    .level-card.featured {
+      border-color: rgba(192,57,43,0.5);
+      background: rgba(192,57,43,0.06);
+    }
+    .level-badge {
+      position: absolute;
+      top: -12px; left: 24px;
+      background: #c0392b;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+    .level-num {
+      font-size: 0.8rem;
+      color: #e74c3c;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .level-name { font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 8px; }
+    .level-price {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .level-price span { font-size: 1rem; color: #888; font-weight: 400; }
+    .level-trial { font-size: 0.85rem; color: #27ae60; margin-bottom: 24px; }
+    .level-features { list-style: none; margin-bottom: 28px; }
+    .level-features li {
+      padding: 8px 0;
+      color: #bbb;
+      font-size: 0.95rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .level-features li:last-child { border-bottom: none; }
+    .level-features li::before {
+      content: '✓';
+      color: #27ae60;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── КАК РАБОТАЕТ ── */
+    .how {
+      padding: 80px 40px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .how h2 { text-align: center; font-size: 2rem; margin-bottom: 48px; color: #fff; }
+    .steps { display: flex; flex-direction: column; gap: 32px; }
+    .step { display: flex; gap: 24px; align-items: flex-start; }
+    .step-num {
+      width: 44px; height: 44px;
+      background: rgba(192,57,43,0.15);
+      border: 1px solid rgba(192,57,43,0.4);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: #e74c3c;
+      flex-shrink: 0;
+      font-size: 1.1rem;
+    }
+    .step-text h3 { color: #fff; margin-bottom: 6px; font-size: 1.05rem; }
+    .step-text p { color: #888; font-size: 0.95rem; }
+
+    /* ── ОТЗЫВЫ ── */
+    .reviews {
+      padding: 80px 40px;
+      background: rgba(255,255,255,0.02);
+    }
+    .reviews h2 { text-align: center; font-size: 2rem; margin-bottom: 48px; color: #fff; }
+    .reviews-grid {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+    }
+    .review-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .review-text { color: #bbb; font-size: 0.95rem; margin-bottom: 16px; line-height: 1.6; }
+    .review-text::before { content: '"'; color: #e74c3c; font-size: 1.5rem; }
+    .review-author { color: #888; font-size: 0.85rem; }
+    .review-result { color: #27ae60; font-size: 0.85rem; font-weight: 600; margin-top: 4px; }
+
+    /* ── CTA ── */
+    .cta {
+      padding: 100px 40px;
+      text-align: center;
+      background: linear-gradient(135deg, #1a0505, #050510);
+    }
+    .cta h2 { font-size: 2.2rem; margin-bottom: 16px; color: #fff; }
+    .cta p { color: #888; margin-bottom: 36px; font-size: 1.05rem; }
+    .cta-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+    /* ── ПОДВАЛ ── */
+    footer {
+      padding: 32px 40px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #555;
+      font-size: 0.85rem;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    footer a { color: #555; text-decoration: none; }
+    footer a:hover { color: #aaa; }
+
+    /* ── АДАПТИВ ── */
+    @media (max-width: 640px) {
+      nav { padding: 16px 20px; }
+      nav .nav-links { display: none; }
+      .hero { padding: 60px 20px; min-height: auto; padding-top: 80px; }
+      .about { grid-template-columns: 1fr; padding: 60px 20px; gap: 32px; }
+      .about-photo { max-width: 200px; margin: 0 auto; }
+      .levels, .reviews, .how, .stats, .cta { padding: 60px 20px; }
+      footer { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- НАВИГАЦИЯ -->
+<nav>
+  <div class="logo">Latvian <span>Trainer</span></div>
+  <div class="nav-links">
+    <a href="#levels">Уровни</a>
+    <a href="#about">О методе</a>
+    <a href="https://www.youtube.com/channel/UC7T-n8O-uOl36vssMZoTQxw" target="_blank">YouTube</a>
+    <a href="https://rikusorsi-dot.github.io/latvian-trainer/" target="_blank" class="btn btn-primary" style="padding:8px 18px;font-size:0.9rem;">Тренажёр</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-tag">🇱🇻 Латышский для русскоязычных</div>
+    <h1>Заговори по-латышски.<br><span>С нуля — до результата.</span></h1>
+    <p>Тренажёр произношения, живые уроки на YouTube и личная поддержка. Все ученики кто поставил цель — её достигли.</p>
+    <div class="hero-btns">
+      <a href="https://rikusorsi-dot.github.io/latvian-trainer/" class="btn btn-primary">Попробовать бесплатно</a>
+      <a href="https://www.youtube.com/channel/UC7T-n8O-uOl36vssMZoTQxw" class="btn btn-outline" target="_blank">YouTube канал</a>
+    </div>
+  </div>
+</section>
+
+<!-- ЦИФРЫ -->
+<section class="stats">
+  <div class="stats-grid">
+    <div>
+      <div class="stat-num">43+</div>
+      <div class="stat-label">видеоурока на канале</div>
+    </div>
+    <div>
+      <div class="stat-num">100%</div>
+      <div class="stat-label">сдали экзамены<br>из тех кто поставил цель</div>
+    </div>
+    <div>
+      <div class="stat-num">82%+</div>
+      <div class="stat-label">минимальный результат<br>на экзамене у учеников</div>
+    </div>
+    <div>
+      <div class="stat-num">3 дня</div>
+      <div class="stat-label">бесплатный доступ<br>к тренажёру</div>
+    </div>
+  </div>
+</section>
+
+<!-- О РИХАРДЕ -->
+<section class="about" id="about">
+  <div class="about-photo">
+    <!-- Заменить на: <img src="фото.jpg" alt="Рихард"> -->
+    👨‍🏫
+  </div>
+  <div>
+    <h2>Привет, я Рихард</h2>
+    <p>Создатель Latvian Trainer и автор YouTube-канала о латышском языке. Я не просто преподаю — я помогаю людям достигать конкретных целей.</p>
+    <p><strong>Сдать экзамен на гражданство. Получить категорию вождения. Заговорить с коллегами и соседями.</strong> Это реальные задачи моих учеников — и все они справились.</p>
+    <p>Я использую методики запоминания которые позволяют учить 100+ слов в час и выстраивать произношение с нуля. Без зубрёжки, без скуки — только системная работа к конкретному результату.</p>
+  </div>
+</section>
+
+<!-- УРОВНИ -->
+<section class="levels" id="levels">
+  <h2>Выбери свой уровень</h2>
+  <p class="levels-sub">От бесплатного знакомства до индивидуальной работы</p>
+  <div class="levels-grid">
+
+    <div class="level-card">
+      <div class="level-num">Уровень 1</div>
+      <div class="level-name">Старт</div>
+      <div class="level-price">Бесплатно <span></span></div>
+      <div class="level-trial">3 дня бесплатного доступа</div>
+      <ul class="level-features">
+        <li>43+ видеоурока на YouTube</li>
+        <li>6 блоков тренажёра, 100+ фраз</li>
+        <li>Тренировка произношения</li>
+        <li>Доступ к плейлистам канала</li>
+      </ul>
+      <a href="https://www.youtube.com/channel/UC7T-n8O-uOl36vssMZoTQxw" class="btn btn-outline" style="width:100%;text-align:center;" target="_blank">Перейти на канал</a>
+    </div>
+
+    <div class="level-card featured">
+      <div class="level-badge">ПОПУЛЯРНЫЙ</div>
+      <div class="level-num">Уровень 2</div>
+      <div class="level-name">Тренажёр + поддержка</div>
+      <div class="level-price">50€ <span>/ месяц</span></div>
+      <div class="level-trial">через YouTube-спонсорство</div>
+      <ul class="level-features">
+        <li>Полный тренажёр произношения</li>
+        <li>Все блоки без ограничений</li>
+        <li>Личная консультация</li>
+        <li>Проверка прогресса раз в неделю</li>
+        <li>Ответы на вопросы</li>
+      </ul>
+      <a href="https://www.youtube.com/channel/UC7T-n8O-uOl36vssMZoTQxw/join" class="btn btn-primary" style="width:100%;text-align:center;" target="_blank">Стать спонсором</a>
+    </div>
+
+    <div class="level-card">
+      <div class="level-num">Уровень 3</div>
+      <div class="level-name">Индивидуально</div>
+      <div class="level-price">По запросу <span></span></div>
+      <div class="level-trial">для серьёзных целей</div>
+      <ul class="level-features">
+        <li>Всё из уровня 2</li>
+        <li>Материал под твою цель</li>
+        <li>Подготовка к конкретному экзамену</li>
+        <li>Еженедельные созвоны</li>
+        <li>Личный план обучения</li>
+      </ul>
+      <a href="mailto:autoriku@gmail.com" class="btn btn-outline" style="width:100%;text-align:center;">Написать Рихарду</a>
+    </div>
+
+  </div>
+</section>
+
+<!-- КАК РАБОТАЕТ -->
+<section class="how">
+  <h2>Как это работает</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">
+        <h3>Смотришь уроки на YouTube</h3>
+        <p>43 видео с нуля до уверенного уровня. Можно смотреть бесплатно в своём темпе.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">
+        <h3>Тренируешь произношение в тренажёре</h3>
+        <p>Повторяешь фразы вслух — тренажёр распознаёт твой голос и показывает результат. iOS: Safari, Android: Chrome.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">
+        <h3>Получаешь обратную связь</h3>
+        <p>На уровне 2 — личная консультация и еженедельная проверка. Знаешь что делаешь правильно, что исправить.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text">
+        <h3>Достигаешь цели</h3>
+        <p>Экзамен, работа, общение с соседями — ставишь конкретную цель и идёшь к ней по понятному пути.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ОТЗЫВЫ -->
+<section class="reviews">
+  <h2>Что говорят ученики</h2>
+  <div class="reviews-grid">
+    <div class="review-card">
+      <div class="review-text">За две недели подготовился к экзамену на гражданство. Уже 10 лет работал в Латвии, знал язык, но боялся что не сдам. Рихард помог разобраться что именно нужно.</div>
+      <div class="review-author">Ученик из Белоруссии</div>
+      <div class="review-result">✓ Сдал экзамен на гражданство</div>
+    </div>
+    <div class="review-card">
+      <div class="review-text">Готовилась к категории А2. Никто не получил ниже 82%. Это реально работает — главное поставить цель и следовать плану.</div>
+      <div class="review-author">Ученица</div>
+      <div class="review-result">✓ Сдала категорию А2 — 89%</div>
+    </div>
+    <div class="review-card">
+      <div class="review-text">Думала что не способна к языкам. Оказалось — просто не было правильного метода. Тренажёр помогает слышать себя и исправлять произношение.</div>
+      <div class="review-author">Ученица</div>
+      <div class="review-result">✓ Заговорила с коллегами</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <h2>Начни сегодня — бесплатно</h2>
+  <p>3 дня полного доступа к тренажёру. Без карты, без обязательств.</p>
+  <div class="cta-btns">
+    <a href="https://rikusorsi-dot.github.io/latvian-trainer/" class="btn btn-primary">Открыть тренажёр</a>
+    <a href="https://www.youtube.com/channel/UC7T-n8O-uOl36vssMZoTQxw" class="btn btn-outline" target="_blank">YouTube канал</a>
+  </div>
+</section>
+
+<!-- ПОДВАЛ -->
+<footer>
+  <div>© 2026 Latvian Trainer · Рихард</div>
+  <div>
+    <a href="https://www.youtube.com/channel/UC7T-n8O-uOl36vssMZoTQxw" target="_blank">YouTube</a>
+    <span style="margin: 0 12px">·</span>
+    <a href="https://rikusorsi-dot.github.io/latvian-trainer/">Тренажёр</a>
+    <span style="margin: 0 12px">·</span>
+    <a href="mailto:autoriku@gmail.com">autoriku@gmail.com</a>
+  </div>
+</footer>
+
+</body>
+</html>
