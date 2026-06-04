@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Аптека за 15 минут</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f4ef;
+      --panel: #fffdf9;
+      --ink: #211f1f;
+      --muted: #706a64;
+      --line: #e5ddd2;
+      --wine: #8b1e2d;
+      --wine-dark: #64151f;
+      --green: #287451;
+      --gold: #b78a2a;
+      --shadow: 0 18px 45px rgba(45, 35, 26, .11);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      padding: 0;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .app {
+      width: min(100%, 480px);
+      min-height: 100dvh;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(183, 138, 42, .14), transparent 32%),
+        linear-gradient(180deg, #fffaf2 0%, var(--bg) 52%, #efe8dd 100%);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      padding: max(14px, env(safe-area-inset-top)) 18px 10px;
+      background: rgba(255, 250, 242, .88);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(229, 221, 210, .8);
+    }
+
+    .brand {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .brand-subtitle {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .pill {
+      flex: 0 0 auto;
+      border: 1px solid rgba(139, 30, 45, .18);
+      border-radius: 999px;
+      color: var(--wine);
+      font-size: 12px;
+      font-weight: 800;
+      padding: 7px 10px;
+      background: #fff7ef;
+    }
+
+    .progress {
+      height: 6px;
+      margin-top: 12px;
+      border-radius: 999px;
+      background: #e9dfd3;
+      overflow: hidden;
+    }
+
+    .progress span {
+      display: block;
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--wine), var(--gold));
+      transition: width .25s ease;
+    }
+
+    .screen {
+      display: none;
+      padding: 22px 18px 18px;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .hero {
+      min-height: calc(100dvh - 150px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 22px;
+      padding-bottom: 18px;
+    }
+
+    .eyebrow {
+      color: var(--wine);
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(38px, 12vw, 54px);
+      line-height: .98;
+      letter-spacing: 0;
+      max-width: 9ch;
+    }
+
+    h2 {
+      font-size: 28px;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      color: #3f3935;
+      font-size: 18px;
+      line-height: 1.45;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .scene {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .scene-title {
+      color: var(--wine);
+      font-size: 13px;
+      font-weight: 900;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .scene p {
+      font-size: 18px;
+      line-height: 1.45;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat {
+      background: rgba(255, 253, 249, .74);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 10px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .card {
+      margin-top: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .counter {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .tag {
+      color: var(--wine);
+      background: #fff2ea;
+      border: 1px solid rgba(139, 30, 45, .14);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .prompt-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .ru {
+      font-size: 28px;
+      line-height: 1.12;
+      font-weight: 900;
+    }
+
+    .hint {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .answer {
+      display: none;
+      margin-top: 18px;
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+    }
+
+    .answer.visible {
+      display: block;
+    }
+
+    .lv {
+      color: var(--wine-dark);
+      font-size: 31px;
+      line-height: 1.12;
+      font-weight: 950;
+    }
+
+    .pronounce {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+      margin-top: 10px;
+    }
+
+    .mini-input {
+      width: 100%;
+      margin-top: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fffaf4;
+      color: var(--ink);
+      padding: 15px 14px;
+      min-height: 54px;
+      outline: none;
+    }
+
+    .mini-input:focus {
+      border-color: rgba(139, 30, 45, .5);
+      box-shadow: 0 0 0 3px rgba(139, 30, 45, .1);
+    }
+
+    .feedback {
+      min-height: 22px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .feedback.ok {
+      color: var(--green);
+      font-weight: 800;
+    }
+
+    .feedback.warn {
+      color: #9a6420;
+      font-weight: 800;
+    }
+
+    .phrase-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .phrase-row {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px;
+    }
+
+    .phrase-row span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+
+    .phrase-row strong {
+      display: block;
+      color: var(--wine-dark);
+      font-size: 18px;
+      line-height: 1.25;
+    }
+
+    .footer {
+      display: grid;
+      gap: 10px;
+      padding: 12px 18px max(16px, env(safe-area-inset-bottom));
+      background: rgba(247, 244, 239, .94);
+      border-top: 1px solid rgba(229, 221, 210, .9);
+      backdrop-filter: blur(14px);
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 8px;
+      min-height: 54px;
+      padding: 15px 16px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform .12s ease, opacity .12s ease;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn.primary {
+      background: var(--wine);
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(139, 30, 45, .22);
+    }
+
+    .btn.secondary {
+      background: #fffaf4;
+      color: var(--wine-dark);
+      border: 1px solid rgba(139, 30, 45, .2);
+    }
+
+    .btn.ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--line);
+    }
+
+    .btn:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .summary {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .summary-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: #3f3935;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    .check {
+      width: 24px;
+      height: 24px;
+      flex: 0 0 24px;
+      border-radius: 50%;
+      background: rgba(40, 116, 81, .12);
+      color: var(--green);
+      display: grid;
+      place-items: center;
+      font-weight: 950;
+    }
+
+    @media (min-width: 700px) {
+      body {
+        padding: 28px 0;
+      }
+
+      .app {
+        min-height: 860px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div>
+          <div class="brand-title">Латышский легко</div>
+          <div class="brand-subtitle" id="topSubtitle">Аптека за 15 минут</div>
+        </div>
+        <div class="pill" id="topPill">0 / 7</div>
+      </div>
+      <div class="progress" aria-label="Прогресс урока">
+        <span id="progressBar"></span>
+      </div>
+    </header>
+
+    <section class="screen active" id="screenStart">
+      <div class="hero">
+        <div>
+          <div class="eyebrow">Мини-тренажёр</div>
+          <h1>Аптека за 15 минут</h1>
+        </div>
+        <p class="lead">7 фраз, чтобы объяснить, что тебе плохо, и не зависнуть в реальной ситуации.</p>
+        <div class="stats">
+          <div class="stat">
+            <strong>7</strong>
+            <span>фраз</span>
+          </div>
+          <div class="stat">
+            <strong>3</strong>
+            <span>повтора</span>
+          </div>
+          <div class="stat">
+            <strong>0</strong>
+            <span>регистраций</span>
+          </div>
+        </div>
+        <div class="scene">
+          <div class="scene-title">Ситуация</div>
+          <p>Ты проснулся, тебе плохо, болит голова. Нужно взять телефон, документы и найти ближайшую аптеку.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screenCoach">
+      <h2>Как проходить</h2>
+      <div class="card">
+        <div class="summary">
+          <div class="summary-item">
+            <div class="check">1</div>
+            <div>Смотри русскую фразу и попробуй сказать её по-латышски сам.</div>
+          </div>
+          <div class="summary-item">
+            <div class="check">2</div>
+            <div>Нажми “Показать ответ”, проговори латышскую фразу 3 раза.</div>
+          </div>
+          <div class="summary-item">
+            <div class="check">3</div>
+            <div>Если хочешь, впиши фразу в поле. Проверка мягкая: пробелы и заглавные буквы не считаются ошибкой.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screenPractice">
+      <h2>Скажи фразу</h2>
+      <div class="card">
+        <div class="card-top">
+          <div class="counter" id="cardCounter">Фраза 1 из 7</div>
+          <div class="tag" id="cardTag">Самочувствие</div>
+        </div>
+        <div class="prompt-label">По-русски</div>
+        <div class="ru" id="ruPhrase"></div>
+        <div class="hint" id="phraseHint"></div>
+        <input class="mini-input" id="answerInput" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Можно вписать латышский ответ">
+        <div class="feedback" id="feedback"></div>
+        <div class="answer" id="answerBox">
+          <div class="prompt-label">По-латышски</div>
+          <div class="lv" id="lvPhrase"></div>
+          <div class="pronounce" id="pronounceText"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screenDialogue">
+      <h2>Теперь собери сцену</h2>
+      <p class="note" style="margin-top:10px;">Проговори всё подряд. Как будто ты реально стоишь у входа в аптеку.</p>
+      <div class="phrase-list" id="dialogueList"></div>
+    </section>
+
+    <section class="screen" id="screenFinish">
+      <div class="hero">
+        <div>
+          <div class="eyebrow">Готово</div>
+          <h1>Ты уже не молчишь</h1>
+        </div>
+        <p class="lead">Теперь у тебя есть 7 фраз для ситуации “мне плохо, нужна аптека”.</p>
+        <div class="scene">
+          <div class="scene-title">Что дальше</div>
+          <p>Следующий выпуск можно сделать как разговор внутри аптеки: “что попросить”, “как спросить цену”, “как понять дозировку”.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="button-row" id="twoButtons">
+        <button class="btn ghost" id="backBtn" type="button">Назад</button>
+        <button class="btn secondary" id="showBtn" type="button">Показать ответ</button>
+      </div>
+      <button class="btn primary" id="mainBtn" type="button">Начать</button>
+    </footer>
+  </main>
+
+  <script>
+    const phrases = [
+      {
+        ru: "Мне плохо.",
+        lv: "Man ir slikti.",
+        tag: "Самочувствие",
+        hint: "Скажи коротко, без объяснений.",
+        note: "Повтори: Man ir slikti."
+      },
+      {
+        ru: "У меня болит голова.",
+        lv: "Man sāp galva.",
+        tag: "Симптом",
+        hint: "В латышском здесь буквально: мне болит голова.",
+        note: "Не добавляй “ir”: Man sāp galva."
+      },
+      {
+        ru: "Мне нужно в аптеку.",
+        lv: "Man jāiet uz aptieku.",
+        tag: "Действие",
+        hint: "Man jāiet — мне надо идти.",
+        note: "Произнеси целиком одним куском."
+      },
+      {
+        ru: "Я беру телефон.",
+        lv: "Es paņemu telefonu.",
+        tag: "Собираюсь",
+        hint: "Paņemu — беру с собой.",
+        note: "ņ звучит мягко: pa-ņe-mu."
+      },
+      {
+        ru: "Я беру ID-карту.",
+        lv: "Es paņemu ID karti.",
+        tag: "Документы",
+        hint: "ID karti — винительный падеж, поэтому karti.",
+        note: "Можно сказать спокойно: ID karti."
+      },
+      {
+        ru: "Я беру банковскую карту.",
+        lv: "Es paņemu bankas karti.",
+        tag: "Оплата",
+        hint: "Bankas karte — банковская карта, здесь bankas karti.",
+        note: "Скажи без спешки: bankas karti."
+      },
+      {
+        ru: "Где ближайшая аптека?",
+        lv: "Kur ir tuvākā aptieka?",
+        tag: "Вопрос",
+        hint: "Tuvākā — ближайшая.",
+        note: "Вопросительная интонация в конце."
+      }
+    ];
+
+    const screens = ["screenStart", "screenCoach", "screenPractice", "screenDialogue", "screenFinish"];
+    let stage = 0;
+    let phraseIndex = 0;
+    let answerVisible = false;
+    let spokenCount = 0;
+
+    const progressBar = document.getElementById("progressBar");
+    const topPill = document.getElementById("topPill");
+    const topSubtitle = document.getElementById("topSubtitle");
+    const cardCounter = document.getElementById("cardCounter");
+    const cardTag = document.getElementById("cardTag");
+    const ruPhrase = document.getElementById("ruPhrase");
+    const lvPhrase = document.getElementById("lvPhrase");
+    const phraseHint = document.getElementById("phraseHint");
+    const pronounceText = document.getElementById("pronounceText");
+    const answerBox = document.getElementById("answerBox");
+    const answerInput = document.getElementById("answerInput");
+    const feedback = document.getElementById("feedback");
+    const backBtn = document.getElementById("backBtn");
+    const showBtn = document.getElementById("showBtn");
+    const mainBtn = document.getElementById("mainBtn");
+    const twoButtons = document.getElementById("twoButtons");
+    const dialogueList = document.getElementById("dialogueList");
+
+    function normalize(value) {
+      return value
+        .toLowerCase()
+        .replace(/[.!?,]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function updateScreen() {
+      screens.forEach((id, index) => {
+        document.getElementById(id).classList.toggle("active", index === stage);
+      });
+
+      const completed = stage < 2 ? 0 : stage === 2 ? phraseIndex : phrases.length;
+      const totalProgress = Math.round(((stage + Math.min(phraseIndex / phrases.length, 1)) / 4) * 100);
+      progressBar.style.width = `${Math.min(totalProgress, 100)}%`;
+      topPill.textContent = `${Math.min(completed, phrases.length)} / ${phrases.length}`;
+      topSubtitle.textContent = stage === 4 ? "Финал" : "Аптека за 15 минут";
+
+      backBtn.disabled = stage === 0;
+      showBtn.style.display = stage === 2 ? "block" : "none";
+      twoButtons.style.gridTemplateColumns = stage === 2 ? "1fr 1fr" : "1fr";
+
+      if (stage === 0) {
+        mainBtn.textContent = "Начать";
+      } else if (stage === 1) {
+        mainBtn.textContent = "К первой фразе";
+      } else if (stage === 2) {
+        mainBtn.textContent = answerVisible ? "Сказал вслух, дальше" : "Я сказал сам";
+      } else if (stage === 3) {
+        mainBtn.textContent = "Завершить";
+      } else {
+        mainBtn.textContent = "Пройти заново";
+      }
+    }
+
+    function renderPhrase() {
+      const phrase = phrases[phraseIndex];
+      cardCounter.textContent = `Фраза ${phraseIndex + 1} из ${phrases.length}`;
+      cardTag.textContent = phrase.tag;
+      ruPhrase.textContent = phrase.ru;
+      lvPhrase.textContent = phrase.lv;
+      phraseHint.textContent = phrase.hint;
+      pronounceText.textContent = phrase.note;
+      answerInput.value = "";
+      feedback.textContent = "";
+      feedback.className = "feedback";
+      answerVisible = false;
+      answerBox.classList.remove("visible");
+      showBtn.textContent = "Показать ответ";
+      updateScreen();
+    }
+
+    function renderDialogue() {
+      dialogueList.innerHTML = phrases
+        .map((phrase) => `
+          <div class="phrase-row">
+            <span>${phrase.ru}</span>
+            <strong>${phrase.lv}</strong>
+          </div>
+        `)
+        .join("");
+    }
+
+    function showAnswer() {
+      answerVisible = true;
+      answerBox.classList.add("visible");
+      showBtn.textContent = "Ответ открыт";
+      const typed = normalize(answerInput.value);
+      const expected = normalize(phrases[phraseIndex].lv);
+
+      if (!typed) {
+        feedback.textContent = "Теперь проговори латышскую фразу 3 раза.";
+        feedback.className = "feedback";
+      } else if (typed === expected) {
+        feedback.textContent = "Верно. Теперь скажи вслух.";
+        feedback.className = "feedback ok";
+      } else {
+        feedback.textContent = "Почти. Сверь с ответом и проговори правильный вариант.";
+        feedback.className = "feedback warn";
+      }
+
+      updateScreen();
+    }
+
+    function next() {
+      if (stage === 0) {
+        stage = 1;
+      } else if (stage === 1) {
+        stage = 2;
+        phraseIndex = 0;
+        renderPhrase();
+        return;
+      } else if (stage === 2) {
+        if (!answerVisible) {
+          showAnswer();
+          return;
+        }
+        spokenCount += 1;
+        if (phraseIndex < phrases.length - 1) {
+          phraseIndex += 1;
+          renderPhrase();
+          return;
+        }
+        stage = 3;
+        renderDialogue();
+      } else if (stage === 3) {
+        stage = 4;
+      } else {
+        stage = 0;
+        phraseIndex = 0;
+        spokenCount = 0;
+      }
+      updateScreen();
+    }
+
+    function back() {
+      if (stage === 0) return;
+      if (stage === 2 && phraseIndex > 0) {
+        phraseIndex -= 1;
+        renderPhrase();
+        return;
+      }
+      stage -= 1;
+      updateScreen();
+    }
+
+    showBtn.addEventListener("click", showAnswer);
+    mainBtn.addEventListener("click", next);
+    backBtn.addEventListener("click", back);
+
+    answerInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") showAnswer();
+    });
+
+    updateScreen();
+  </script>
+</body>
+</html>
