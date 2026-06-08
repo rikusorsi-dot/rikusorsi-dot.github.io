@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f3ec">
+    <title>Репетитор за рулём - урок 1</title>
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <main class="app phone-shell" aria-live="polite">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">Репетитор за рулём</p>
+          <h1>Урок 1</h1>
+        </div>
+      </section>
+
+      <section class="start-view" id="startView">
+        <div class="hero">
+          <p class="lesson-count">5 фраз бесплатно</p>
+          <h2>Репетитор рядом</h2>
+        </div>
+        <div class="actions">
+          <button class="primary-button" id="startBtn" type="button">Начать</button>
+        </div>
+        <p class="support-note" id="supportNote"></p>
+      </section>
+
+      <section class="lesson-view hidden" id="lessonView">
+        <div class="progress-row">
+          <span>Урок 1</span>
+          <span id="stepLabel">1/5</span>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="prompt-panel">
+          <p class="status" id="statusText">Готово</p>
+          <h2 id="promptText">Как скажешь...</h2>
+          <p class="recognized" id="recognizedText">Команды: atkārto, turpinām, stop, tālāk</p>
+        </div>
+
+        <div class="actions compact-actions">
+          <button class="primary-button hidden" id="continueBtn" type="button">Продолжить</button>
+          <button class="secondary-button" id="stopBtn" type="button">Пауза</button>
+        </div>
+      </section>
+
+      <section class="result-view hidden" id="resultView">
+        <p class="eyebrow">Финал</p>
+        <h2 id="resultTitle">Урок завершён</h2>
+        <p class="score" id="scoreText">0/5</p>
+        <div class="weak-list" id="weakList"></div>
+        <div class="actions result-actions">
+          <button class="primary-button" id="reinforceBtn" type="button">Закрепить ещё раз</button>
+          <button class="secondary-button" id="nextLessonBtn" type="button">Продолжить</button>
+          <button class="secondary-button" id="feedbackBtn" type="button">Оставить отзыв</button>
+          <button class="secondary-button" id="priceBtn" type="button">Сколько стоит?</button>
+          <button class="secondary-button" id="restartBtn" type="button">Сначала</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
