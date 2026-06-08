@@ -24,6 +24,7 @@ const audioCache = new Map();
 const progressKey = "repetitorZaRulemLesson1";
 const introKey = "repetitorZaRulemIntroDoneMp3V1";
 const listenLimitMs = 12000;
+const retryableRecognitionErrors = new Set(["aborted", "no-speech"]);
 
 let recognition = null;
 let queue = baseItems;
@@ -200,22 +201,53 @@ function play(id, after = null) {
   });
 }
 
-function playReadySignal() {
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const context = new AudioContext();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.frequency.value = 720;
-    gain.gain.value = 0.04;
-    oscillator.connect(gain);
-    gain.connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + 0.12);
-  } catch {}
+function playReadySignal(after = null) {
+  stopRecognition();
+  stopAudio();
+  isSpeaking = true;
+  setStatus("Жди сигнал", "warn");
+  el.recognizedText.textContent = "После сигнала говори по-латышски.";
+
+  const audio = getAudio("ready_signal");
+  currentAudio = audio;
+  audio.currentTime = 0;
+
+  const finish = () => {
+    isSpeaking = false;
+    currentAudio = null;
+    if (after) after();
+  };
+
+  audio.onended = finish;
+  audio.onerror = finish;
+  audio.play().catch(finish);
 }
 
-function startListening() {
+function recognitionErrorText(error) {
+  const code = typeof error === "string" ? error : error?.error || error?.name || "unknown";
+  if (code === "not-allowed" || code === "service-not-allowed") {
+    return "Браузер не дал доступ к микрофону. Проверь разрешение микрофона для этой страницы.";
+  }
+  if (code === "audio-capture") {
+    return "Браузер не видит микрофон. Проверь, не занят ли он другим приложением.";
+  }
+  if (code === "network") {
+    return "Распознавание голоса не запустилось из-за сети. Попробуй ещё раз с нормальным интернетом.";
+  }
+  if (code === "language-not-supported" || code === "language-unavailable") {
+    return "Браузер не даёт распознавание латышского языка на этом телефоне.";
+  }
+  if (code === "no-speech") {
+    return "Пока не услышал голос. Скажи фразу после сигнала.";
+  }
+  return `Микрофон не запустился: ${code}.`;
+}
+
+function showRecognitionError(error) {
+  pauseLesson(recognitionErrorText(error));
+}
+
+function startListening(retries = 0) {
   if (!recognition || !isRunning || isSpeaking || finalShown || isPaused) return;
   if (Date.now() >= listenDeadline) {
     pauseLesson("Молчание больше 10 секунд. Нажми «Продолжить», когда будешь готов.");
@@ -232,18 +264,21 @@ function startListening() {
       pauseLesson("Молчание больше 10 секунд. Нажми «Продолжить», когда будешь готов.");
     }, Math.max(800, listenDeadline - Date.now()));
     recognition.start();
-    window.setTimeout(playReadySignal, 250);
-  } catch {
-    window.setTimeout(startListening, 350);
+  } catch (error) {
+    if (retries < 2 && error?.name === "InvalidStateError") {
+      window.setTimeout(() => startListening(retries + 1), 350);
+      return;
+    }
+    showRecognitionError(error);
   }
 }
 
 function beginListeningWindow(delay = 1100) {
   if (!isRunning || finalShown || isPaused) return;
   setStatus("Жди сигнал", "warn");
-  el.recognizedText.textContent = "Подожди секунду: микрофон включается.";
+  el.recognizedText.textContent = "Подожди секунду: сейчас будет сигнал.";
   listenDeadline = Date.now() + listenLimitMs;
-  window.setTimeout(startListening, delay);
+  window.setTimeout(() => playReadySignal(() => startListening()), delay);
 }
 
 function askCurrentQuestion() {
@@ -373,10 +408,14 @@ function setupRecognition() {
     handleAnswer(transcript);
   };
 
-  recognition.onerror = () => {
-    if (isRunning && listenWindowActive && !isSpeaking && !finalShown && Date.now() < listenDeadline) {
-      window.setTimeout(startListening, 600);
+  recognition.onerror = (event) => {
+    const code = event?.error || "unknown";
+    el.recognizedText.textContent = recognitionErrorText(code);
+    if (retryableRecognitionErrors.has(code) && isRunning && listenWindowActive && !isSpeaking && !finalShown && Date.now() < listenDeadline) {
+      window.setTimeout(() => startListening(), 600);
+      return;
     }
+    showRecognitionError(code);
   };
 
   recognition.onend = () => {
@@ -404,6 +443,7 @@ function warmAudio() {
     "next_lesson",
     "feedback_info",
     "price_info",
+    "ready_signal",
   ].forEach((id) => getAudio(id).load());
 }
 
@@ -584,7 +624,34 @@ function showPriceInfo() {
   play("price_info");
 }
 
-function startFromButton() {
+async function requestMicrophoneAccess() {
+  if (!window.isSecureContext) {
+    el.supportNote.textContent = "Микрофон работает только по HTTPS. Открой публичную https-ссылку.";
+    return false;
+  }
+
+  if (!recognition) {
+    el.supportNote.textContent = "Этот браузер не поддерживает голосовое распознавание. Попробуй Chrome на Android или Safari на iPhone.";
+    return false;
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia) return true;
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
+    el.supportNote.textContent = "";
+    return true;
+  } catch (error) {
+    el.supportNote.textContent = recognitionErrorText(error);
+    return false;
+  }
+}
+
+async function startFromButton() {
+  const hasMicrophone = await requestMicrophoneAccess();
+  if (!hasMicrophone) return;
+
   if (getSavedProgress()) {
     continueLesson();
     return;
