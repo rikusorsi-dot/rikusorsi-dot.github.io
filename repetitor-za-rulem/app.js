@@ -227,6 +227,7 @@ function playReadySignal(after = null) {
 
 function microphoneErrorText(error) {
   const code = typeof error === "string" ? error : error?.error || error?.name || "unknown";
+  const message = String(error?.message || "").trim();
   if (code === "not-allowed" || code === "service-not-allowed") {
     return "Браузер не дал доступ к микрофону. Проверь разрешение микрофона для этой страницы.";
   }
@@ -241,6 +242,9 @@ function microphoneErrorText(error) {
   }
   if (code === "no-speech") {
     return "Пока не услышал голос. Скажи фразу после сигнала.";
+  }
+  if (code === "Error" && message) {
+    return `Распознавание не сработало: ${message}`;
   }
   return `Микрофон/распознавание не запустились: ${code}.`;
 }
