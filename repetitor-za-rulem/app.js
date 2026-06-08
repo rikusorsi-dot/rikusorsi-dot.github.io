@@ -172,9 +172,6 @@ function stopRecognition() {
   listenWindowActive = false;
   listenGeneration += 1;
 
-  const track = microphoneStream?.getAudioTracks?.()[0];
-  if (track) track.enabled = false;
-
   if (pendingTranscript) {
     const error = new Error("listening stopped");
     error.code = "listening_stopped";
@@ -365,7 +362,7 @@ async function ensureRealtimeConnection() {
 
     const track = microphoneStream?.getAudioTracks?.()[0];
     if (!track) throw new Error("microphone stream is missing");
-    track.enabled = false;
+    track.enabled = true;
 
     const token = await fetchRealtimeToken();
     const pc = new RTCPeerConnection();
@@ -422,18 +419,20 @@ async function captureRealtimeAnswer(generation) {
 
   sendRealtimeEvent({ type: "input_audio_buffer.clear" });
   const transcriptPromise = waitForRealtimeTranscript();
-  const track = microphoneStream.getAudioTracks()[0];
-  track.enabled = true;
 
+  await sleep(350);
   await sleep(recordLimitMs);
-  track.enabled = false;
 
   if (generation !== listenGeneration) throw Object.assign(new Error("listening stopped"), { code: "listening_stopped" });
   if (!sendRealtimeEvent({ type: "input_audio_buffer.commit" })) {
     throw new Error("realtime data channel closed");
   }
 
-  return transcriptPromise;
+  try {
+    return await transcriptPromise;
+  } finally {
+    sendRealtimeEvent({ type: "input_audio_buffer.clear" });
+  }
 }
 
 async function startListening() {
@@ -799,7 +798,7 @@ async function requestMicrophoneAccess() {
       microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     }
     const track = microphoneStream.getAudioTracks()[0];
-    if (track) track.enabled = false;
+    if (track) track.enabled = true;
     el.supportNote.textContent = "";
     return true;
   } catch (error) {
