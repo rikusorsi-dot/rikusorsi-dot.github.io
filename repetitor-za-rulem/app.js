@@ -44,6 +44,20 @@ let listenDeadline = 0;
 let listenTimer = null;
 let listenWindowActive = false;
 let listenGeneration = 0;
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if (!("wakeLock" in navigator) || document.visibilityState !== "visible") return;
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+  } catch {}
+}
+
+function releaseWakeLock() {
+  if (!wakeLock) return;
+  wakeLock.release().catch(() => {});
+  wakeLock = null;
+}
 
 const el = {
   startView: document.querySelector("#startView"),
@@ -229,7 +243,10 @@ function microphoneErrorText(error) {
   const code = typeof error === "string" ? error : error?.error || error?.name || "unknown";
   const message = String(error?.message || "").trim();
   if (code === "not-allowed" || code === "service-not-allowed") {
-    return "Браузер не дал доступ к микрофону. Проверь разрешение микрофона для этой страницы.";
+    const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent || "");
+    return isIOS
+      ? "Открой страницу в Safari — в Telegram и Chrome на iPhone микрофон не работает."
+      : "Браузер не дал доступ к микрофону. Проверь разрешение микрофона для этой страницы.";
   }
   if (code === "audio-capture") {
     return "Браузер не видит микрофон. Проверь, не занят ли он другим приложением.";
@@ -397,6 +414,11 @@ async function startListening() {
     return;
   }
 
+  if (!microphoneStream?.active) {
+    pauseLesson("Микрофон стал недоступен. Нажми «Продолжить», чтобы переподключить.");
+    return;
+  }
+
   try {
     setStatus("Говори", "ok");
     el.recognizedText.textContent = "Говори сейчас. Слушаю короткий ответ.";
@@ -454,6 +476,7 @@ function nextQuestion() {
 function pauseLesson(message) {
   isPaused = true;
   isRunning = false;
+  releaseWakeLock();
   stopRecognition();
   stopAudio();
   setStatus("Пауза", "warn");
@@ -590,6 +613,7 @@ function applySavedProgress(saved) {
 }
 
 function startBaseLesson() {
+  requestWakeLock();
   warmAudio();
   phase = "base";
   queue = baseItems;
@@ -634,7 +658,13 @@ function startLesson() {
   });
 }
 
-function continueLesson() {
+async function continueLesson() {
+  if (!microphoneStream?.active) {
+    const ok = await requestMicrophoneAccess();
+    if (!ok) return;
+  }
+
+  requestWakeLock();
   const saved = getSavedProgress();
   if (!saved) {
     startLesson();
@@ -658,6 +688,7 @@ function continueLesson() {
 }
 
 function startReinforcement() {
+  requestWakeLock();
   warmAudio();
   phase = "bricks";
   queue = brickItems;
@@ -744,15 +775,15 @@ async function requestMicrophoneAccess() {
   }
 
   try {
-    if (!microphoneStream?.active) {
-      microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    }
     const AudioContextClass = getAudioContextClass();
     if (!audioContext || audioContext.state === "closed") {
       audioContext = new AudioContextClass();
     }
     if (audioContext.state === "suspended") {
       await audioContext.resume();
+    }
+    if (!microphoneStream?.active) {
+      microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     }
     const track = microphoneStream.getAudioTracks()[0];
     if (track) track.enabled = true;
@@ -767,6 +798,7 @@ async function requestMicrophoneAccess() {
 async function startFromButton() {
   const hasMicrophone = await requestMicrophoneAccess();
   if (!hasMicrophone) return;
+  requestWakeLock();
 
   if (getSavedProgress()) {
     continueLesson();
@@ -779,6 +811,7 @@ async function startFromButton() {
 function finishLesson(type) {
   finalShown = true;
   isRunning = false;
+  releaseWakeLock();
   stopRecognition();
   stopAudio();
   storageRemove(progressKey);
@@ -799,6 +832,17 @@ function finishLesson(type) {
 }
 
 function bindEvents() {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      if (isRunning && !isPaused) {
+        pauseLesson("Экран заблокировался. Нажми «Продолжить», когда будешь готов.");
+      }
+      return;
+    }
+
+    if (isRunning && !isPaused) requestWakeLock();
+  });
+
   el.startBtn.addEventListener("click", startFromButton);
   el.continueBtn.addEventListener("click", continueLesson);
   el.restartBtn.addEventListener("click", startLesson);
