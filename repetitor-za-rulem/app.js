@@ -24,10 +24,14 @@ const progressKey = "repetitorZaRulemLesson1";
 const introKey = "repetitorZaRulemIntroDoneMp3V1";
 const listenLimitMs = 12000;
 const recordLimitMs = 4500;
-const transcribeUrl = "https://latvijas-skola.lv/repetitor-api/transcribe";
+const realtimeTokenUrl = "https://latvijas-skola.lv/repetitor-api/realtime-token";
+const realtimeCallsUrl = "https://api.openai.com/v1/realtime/calls";
 
 let microphoneStream = null;
-let recorder = null;
+let realtimePc = null;
+let realtimeDc = null;
+let realtimeReadyPromise = null;
+let pendingTranscript = null;
 let queue = baseItems;
 let phase = "base";
 let index = 0;
@@ -42,6 +46,7 @@ let skipped = [];
 let listenDeadline = 0;
 let listenTimer = null;
 let listenWindowActive = false;
+let listenGeneration = 0;
 
 const el = {
   startView: document.querySelector("#startView"),
@@ -165,10 +170,16 @@ function stopRecognition() {
   window.clearTimeout(listenTimer);
   listenTimer = null;
   listenWindowActive = false;
-  try {
-    recorder?.state === "recording" && recorder.stop();
-  } catch {}
-  recorder = null;
+  listenGeneration += 1;
+
+  const track = microphoneStream?.getAudioTracks?.()[0];
+  if (track) track.enabled = false;
+
+  if (pendingTranscript) {
+    const error = new Error("listening stopped");
+    error.code = "listening_stopped";
+    settlePendingTranscript("reject", error);
+  }
 }
 
 function stopAudio() {
@@ -253,56 +264,176 @@ function showMicrophoneError(error) {
   pauseLesson(microphoneErrorText(error));
 }
 
-function getRecorderMimeType() {
-  const types = [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/mp4",
-    "audio/aac",
-  ];
-
-  return types.find((type) => window.MediaRecorder?.isTypeSupported?.(type)) || "";
+function sleep(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-function recordAudio() {
-  return new Promise((resolve, reject) => {
-    if (!microphoneStream || !window.MediaRecorder) {
-      reject(new Error("MediaRecorder is not supported"));
-      return;
-    }
-
-    const chunks = [];
-    const mimeType = getRecorderMimeType();
-    recorder = mimeType
-      ? new MediaRecorder(microphoneStream, { mimeType })
-      : new MediaRecorder(microphoneStream);
-
-    recorder.ondataavailable = (event) => {
-      if (event.data?.size) chunks.push(event.data);
-    };
-    recorder.onerror = (event) => reject(event.error || new Error("recording failed"));
-    recorder.onstop = () => {
-      resolve(new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" }));
-    };
-
-    recorder.start();
-    window.setTimeout(() => {
-      if (recorder?.state === "recording") recorder.stop();
-    }, recordLimitMs);
-  });
+function getRealtimeTokenValue(data) {
+  if (typeof data?.value === "string") return data.value;
+  if (typeof data?.client_secret?.value === "string") return data.client_secret.value;
+  return "";
 }
 
-async function transcribeAudio(blob) {
-  const response = await fetch(transcribeUrl, {
-    method: "POST",
-    headers: { "Content-Type": blob.type || "audio/webm" },
-    body: blob,
-  });
+async function fetchRealtimeToken() {
+  const response = await fetch(realtimeTokenUrl, { method: "GET" });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.detail || data.error || `transcribe ${response.status}`);
+    throw new Error(data.error || `realtime token ${response.status}`);
   }
-  return String(data.text || "").trim();
+
+  const token = getRealtimeTokenValue(data);
+  if (!token) throw new Error("empty realtime token");
+  return token;
+}
+
+function closeRealtimeConnection() {
+  try {
+    realtimeDc?.close();
+  } catch {}
+  try {
+    realtimePc?.close();
+  } catch {}
+  realtimeDc = null;
+  realtimePc = null;
+  realtimeReadyPromise = null;
+}
+
+function sendRealtimeEvent(event) {
+  if (realtimeDc?.readyState !== "open") return false;
+  realtimeDc.send(JSON.stringify(event));
+  return true;
+}
+
+function settlePendingTranscript(type, value) {
+  const pending = pendingTranscript;
+  if (!pending) return;
+  window.clearTimeout(pending.timeout);
+  pendingTranscript = null;
+  pending[type](value);
+}
+
+function handleRealtimeMessage(message) {
+  let event = null;
+  try {
+    event = JSON.parse(message.data);
+  } catch {
+    return;
+  }
+
+  if (event.type === "conversation.item.input_audio_transcription.delta" && pendingTranscript) {
+    pendingTranscript.partial += event.delta || "";
+    const partial = pendingTranscript.partial.trim();
+    if (partial) el.recognizedText.textContent = `Слышу: ${partial}`;
+    return;
+  }
+
+  if (event.type === "conversation.item.input_audio_transcription.completed" && pendingTranscript) {
+    const transcript = String(event.transcript || pendingTranscript.partial || "").trim();
+    settlePendingTranscript("resolve", transcript);
+    return;
+  }
+
+  if (event.type === "error" && pendingTranscript) {
+    settlePendingTranscript("reject", new Error(event.error?.message || "realtime error"));
+  }
+}
+
+function waitForRealtimeTranscript() {
+  if (pendingTranscript) {
+    settlePendingTranscript("reject", new Error("previous listening window was not finished"));
+  }
+
+  return new Promise((resolve, reject) => {
+    pendingTranscript = {
+      partial: "",
+      resolve,
+      reject,
+      timeout: window.setTimeout(() => {
+        const transcript = pendingTranscript?.partial?.trim() || "";
+        settlePendingTranscript("resolve", transcript);
+      }, 8000),
+    };
+  });
+}
+
+async function ensureRealtimeConnection() {
+  if (realtimeDc?.readyState === "open" && realtimePc?.connectionState !== "failed") return;
+  if (realtimeReadyPromise) return realtimeReadyPromise;
+
+  realtimeReadyPromise = (async () => {
+    closeRealtimeConnection();
+
+    const track = microphoneStream?.getAudioTracks?.()[0];
+    if (!track) throw new Error("microphone stream is missing");
+    track.enabled = false;
+
+    const token = await fetchRealtimeToken();
+    const pc = new RTCPeerConnection();
+    realtimePc = pc;
+    pc.addTrack(track, microphoneStream);
+
+    const dc = pc.createDataChannel("oai-events");
+    realtimeDc = dc;
+    dc.addEventListener("message", handleRealtimeMessage);
+
+    const dataChannelOpen = new Promise((resolve, reject) => {
+      const timeout = window.setTimeout(() => reject(new Error("data channel timeout")), 8000);
+      dc.addEventListener("open", () => {
+        window.clearTimeout(timeout);
+        resolve();
+      }, { once: true });
+      dc.addEventListener("error", () => {
+        window.clearTimeout(timeout);
+        reject(new Error("data channel error"));
+      }, { once: true });
+    });
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    const response = await fetch(realtimeCallsUrl, {
+      method: "POST",
+      body: offer.sdp,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/sdp",
+      },
+    });
+
+    const answerSdp = await response.text();
+    if (!response.ok) {
+      throw new Error(`realtime call ${response.status}`);
+    }
+
+    await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+    await dataChannelOpen;
+  })();
+
+  try {
+    await realtimeReadyPromise;
+  } finally {
+    realtimeReadyPromise = null;
+  }
+}
+
+async function captureRealtimeAnswer(generation) {
+  await ensureRealtimeConnection();
+  if (generation !== listenGeneration) throw Object.assign(new Error("listening stopped"), { code: "listening_stopped" });
+
+  sendRealtimeEvent({ type: "input_audio_buffer.clear" });
+  const transcriptPromise = waitForRealtimeTranscript();
+  const track = microphoneStream.getAudioTracks()[0];
+  track.enabled = true;
+
+  await sleep(recordLimitMs);
+  track.enabled = false;
+
+  if (generation !== listenGeneration) throw Object.assign(new Error("listening stopped"), { code: "listening_stopped" });
+  if (!sendRealtimeEvent({ type: "input_audio_buffer.commit" })) {
+    throw new Error("realtime data channel closed");
+  }
+
+  return transcriptPromise;
 }
 
 async function startListening() {
@@ -314,24 +445,24 @@ async function startListening() {
 
   try {
     setStatus("Говори", "ok");
-    el.recognizedText.textContent = "Говори сейчас. Записываю короткий ответ.";
+    el.recognizedText.textContent = "Говори сейчас. Слушаю короткий ответ.";
     listenWindowActive = true;
+    const generation = listenGeneration;
     window.clearTimeout(listenTimer);
     listenTimer = window.setTimeout(() => {
       pauseLesson("Молчание больше 10 секунд. Нажми «Продолжить», когда будешь готов.");
     }, Math.max(800, listenDeadline - Date.now()));
-    const audio = await recordAudio();
+    const transcript = await captureRealtimeAnswer(generation);
     window.clearTimeout(listenTimer);
     listenTimer = null;
     setStatus("Проверяю", "warn");
-    el.recognizedText.textContent = "Распознаю ответ...";
-    const transcript = await transcribeAudio(audio);
     if (!transcript) {
       pauseLesson("Не получилось распознать ответ. Нажми «Продолжить» и скажи фразу после сигнала.");
       return;
     }
     handleAnswer(transcript);
   } catch (error) {
+    if (error?.code === "listening_stopped") return;
     showMicrophoneError(error);
   }
 }
@@ -371,6 +502,7 @@ function pauseLesson(message) {
   isPaused = true;
   isRunning = false;
   stopRecognition();
+  closeRealtimeConnection();
   stopAudio();
   setStatus("Пауза", "warn");
   el.continueBtn.classList.remove("hidden");
@@ -616,6 +748,7 @@ function showNextLessonStub() {
   finalShown = true;
   isRunning = false;
   stopRecognition();
+  closeRealtimeConnection();
   stopAudio();
   setView("result");
   el.resultTitle.textContent = "Следующий урок";
@@ -630,6 +763,7 @@ function showNextLessonStub() {
 
 function showFeedbackStub() {
   stopRecognition();
+  closeRealtimeConnection();
   stopAudio();
   el.weakList.innerHTML = "";
   const note = document.createElement("p");
@@ -640,6 +774,7 @@ function showFeedbackStub() {
 
 function showPriceInfo() {
   stopRecognition();
+  closeRealtimeConnection();
   stopAudio();
   el.weakList.innerHTML = "";
   const note = document.createElement("p");
@@ -654,13 +789,17 @@ async function requestMicrophoneAccess() {
     return false;
   }
 
-  if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
-    el.supportNote.textContent = "Этот браузер не даёт записывать голос. Открой страницу в обычном Safari или Chrome.";
+  if (!window.RTCPeerConnection || !navigator.mediaDevices?.getUserMedia) {
+    el.supportNote.textContent = "Этот браузер не даёт голосовой WebRTC-режим. Открой страницу в обычном Safari или Chrome.";
     return false;
   }
 
   try {
-    microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (!microphoneStream?.active) {
+      microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+    const track = microphoneStream.getAudioTracks()[0];
+    if (track) track.enabled = false;
     el.supportNote.textContent = "";
     return true;
   } catch (error) {
@@ -685,6 +824,7 @@ function finishLesson(type) {
   finalShown = true;
   isRunning = false;
   stopRecognition();
+  closeRealtimeConnection();
   stopAudio();
   storageRemove(progressKey);
   setView("result");
